@@ -18,6 +18,7 @@ class CategoryResource extends JsonResource
             'id'   => $this->id,
             'slug' => $this->slug,
             'name' => $this->name,
+            'name_en' => $this->name_en,
             'icon' => $this->icon,
             'icon_url' => $this->icon
                 ? asset('storage/uploads/categories/' . $this->icon)

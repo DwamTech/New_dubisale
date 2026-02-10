@@ -1,5 +1,6 @@
 {
     "$schema": "https://json.schemastore.org/package.json",
+    "name": "dubisale-api",
     "private": true,
     "type": "module",
     "scripts": {
