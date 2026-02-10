@@ -32,7 +32,16 @@ use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\PlansController;
 use App\Http\Controllers\ListingReportController;
 
+use App\Http\Controllers\OtpController;
+
 Route::post('/register', [AuthController::class, 'register']);
+
+// OTP Routes
+Route::prefix('otp')->group(function () {
+    Route::post('/send', [OtpController::class, 'send']);
+    Route::post('/verify', [OtpController::class, 'verify']);
+});
+
 Route::get('v1/test', fn() => response()->json(['ok' => true]));
 
 // Public Category Fields Route
