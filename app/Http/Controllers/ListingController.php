@@ -11,6 +11,7 @@ use App\Services\ListingService;
 use App\Support\Section;
 use App\Traits\HasRank;
 use App\Traits\PackageHelper;
+use App\Traits\LocalizedResponse;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -30,7 +31,7 @@ use App\Services\NotificationService;
 
 class ListingController extends Controller
 {
-    use HasRank, PackageHelper;
+    use HasRank, PackageHelper, LocalizedResponse;
 
 
 
@@ -314,7 +315,7 @@ class ListingController extends Controller
                 } else {
                     // 4. No Package, No Sub -> Payment Required
                     $paymentRequired = true;
-                    $message = $packageData['message'] ?? "لا تملك باقة فعّالة أو رصيد كافٍ، يجب عليك الدفع لنشر هذا الإعلان.";
+                    $message = $packageData['message'] ?? __('api.listing_no_package');
                 }
             }
         } else {
@@ -355,18 +356,17 @@ class ListingController extends Controller
                     if ($overCount && $overPrice) {
                         return Response()->json([
                             'success' => false,
-                            'message' => ' لقد تجاوزت الحد الأقصى لعدد الإعلانات المجانية في هذا القسم، كما أن سعر هذا الإعلان أعلى من الحد المسموح به للإعلان المجاني. لنشر هذا الإعلان، يُرجى الاشتراك في باقة مدفوعة أو دفع تكلفة إعلان منفرد مع تغير نوع الخطه  لهذا الاعلان .',
+                            'message' => __('api.listing_free_both'),
                         ], 402);
                     } elseif ($overCount) {
                         return Response()->json([
                             'success' => false,
-                            'message' => ' لقد تجاوزت الحد الأقصى لعدد الإعلانات المجانية المسموح بها في هذا القسم. لنشر المزيد من الإعلانات، يُرجى الاشتراك في باقة مدفوعة أو دفع تكلفة إعلان منفرد. مع تغير نوع الخطه  لهذا الاعلان'
-
+                            'message' => __('api.listing_free_count'),
                         ], 402);
                     } elseif ($overPrice) {
                         return Response()->json([
                             'success' => false,
-                            'message' => 'سعر هذا الإعلان أعلى من الحد الأقصى المسموح به للإعلان المجاني في هذا القسم. يمكنك إمّا تخفيض السعر ليتوافق مع الحد المجاني أو الاشتراك في باقة مدفوعة لنشر الإعلان. مع تغير نوع الخطه  لهذا الاعلان'
+                            'message' => __('api.listing_free_price'),
                         ], 402);
                     }
                 }
@@ -426,8 +426,8 @@ class ListingController extends Controller
         // Notify Admin if listing is Pending (Manual Approval)
         if ($listing->status === 'Pending') {
             $adminNotification->dispatch(
-                'إعلان جديد بانتظار المراجعة',
-                "يوجد إعلان جديد رقم #{$listing->id} في قسم {$sec->name} يحتاج للمراجعة والموافقة.",
+                __('api.listing_pending_admin'),
+                __('api.listing_pending_admin_body', ['id' => $listing->id, 'section' => $sec->name]),
                 'listing_pending',
                 ['listing_id' => $listing->id]
             );
@@ -513,14 +513,14 @@ class ListingController extends Controller
                     ]);
                     return response()->json([
                         'success' => true,
-                        'message' => 'تم تجديد الإعلان بنجاح عبر الباقة',
+                        'message' => __('api.listing_renew_package'),
                         'data' => new ListingResource($listing)
                     ]);
                 }
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'لا يوجد رصيد كافي في الاشتراك أو الباقة لتجديد الإعلان. يرجى الاشتراك أو شراء باقة.',
+                    'message' => __('api.listing_renew_no_balance'),
                     'payment_required' => true
                 ], 402);
             }
@@ -556,9 +556,9 @@ class ListingController extends Controller
             $overPrice = ($freeMaxPrice > 0 && $priceVal > $freeMaxPrice);
 
             if ($overCount || $overPrice) {
-                $msg = 'لا يمكن تجديد الإعلان مجاناً.';
-                if ($overCount) $msg .= ' تجاوزت الحد الأقصى للإعلانات المجانية.';
-                if ($overPrice) $msg .= ' سعر الإعلان يتجاوز الحد المسموح للمجاني.';
+                $msg = __('api.listing_renew_free_limit');
+                if ($overCount) $msg .= ' ' . __('api.listing_renew_over_count');
+                if ($overPrice) $msg .= ' ' . __('api.listing_renew_over_price');
 
                 return response()->json([
                     'success' => false,
@@ -578,7 +578,7 @@ class ListingController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم تجديد الإعلان المجاني بنجاح',
+                'message' => __('api.listing_renew_free'),
                 'data' => new ListingResource($listing)
             ]);
         }
@@ -595,8 +595,12 @@ class ListingController extends Controller
             if ($viewer && $viewer->id !== $listing->user_id) {
                 $notifications->dispatch(
                     (int) $listing->user_id,
-                    ' تمت مشاهدة إعلانك',
-                    'قام المستخدم #' . $viewer->id . ' بمشاهدة إعلانك #' . $listing->id . ' في قسم ' . $sec->name,
+                    __('api.listing_view_notify'),
+                    __('api.listing_view_notify_body', [
+                        'viewer'  => $viewer->id,
+                        'listing' => $listing->id,
+                        'section' => $sec->name,
+                    ]),
                     'view',
                     ['viewer_id' => (int) $viewer->id, 'listing_id' => (int) $listing->id, 'category_slug' => $sec->slug]
                 );
@@ -681,7 +685,7 @@ class ListingController extends Controller
 
         if (strlen($keyword) < 2) {
             return response()->json([
-                'message' => 'يجب إدخال كلمة بحث (على الأقل حرفين)',
+                'message' => __('api.listing_search_min'),
             ], 422);
         }
 
@@ -833,7 +837,7 @@ class ListingController extends Controller
 
         if (!$isOwner && !$isAdmin) {
             return response()->json([
-                'message' => 'غير مصرح لك بتعديل هذا الإعلان.'
+                'message' => __('api.listing_unauthorized_edit2'),
             ], 403);
         }
 
@@ -880,7 +884,7 @@ class ListingController extends Controller
 
         if (!$isOwner && !$isAdmin) {
             return response()->json([
-                'message' => 'غير مصرح لك بحذف هذا الإعلان'
+                'message' => __('api.listing_unauthorized_del2'),
             ], 403);
         }
 
@@ -905,7 +909,7 @@ class ListingController extends Controller
                 'error' => $e->getMessage(),
             ]);
             $field = $bucket === 'main' ? 'main_image' : 'images';
-            throw \Illuminate\Validation\ValidationException::withMessages([$field => ['فشل رفع الملف.']]);
+            throw \Illuminate\Validation\ValidationException::withMessages([$field => [__('api.listing_upload_failed')]]);
         }
         if (!$path) {
             Log::error('upload_store_failed', [
@@ -916,7 +920,7 @@ class ListingController extends Controller
                 'disk_root' => config('filesystems.disks.public.root'),
             ]);
             $field = $bucket === 'main' ? 'main_image' : 'images';
-            throw \Illuminate\Validation\ValidationException::withMessages([$field => ['فشل رفع الملف.']]);
+            throw \Illuminate\Validation\ValidationException::withMessages([$field => [__('api.listing_upload_failed')]]);
         }
         if (!Storage::disk('public')->exists($path)) {
             Log::error('upload_file_missing_after_store', [
@@ -924,7 +928,7 @@ class ListingController extends Controller
                 'dir' => $dir,
             ]);
             $field = $bucket === 'main' ? 'main_image' : 'images';
-            throw \Illuminate\Validation\ValidationException::withMessages([$field => ['فشل حفظ الملف.']]);
+            throw \Illuminate\Validation\ValidationException::withMessages([$field => [__('api.listing_upload_save_failed')]]);
         }
         return $path;
     }

@@ -12,20 +12,23 @@ class CategoryField extends Model
         'category_slug',
         'field_name',
         'display_name',
+        'display_name_en',
         'type',
         'required',
         'filterable',
         'options',
+        'options_en',
         'rules_json',
         'is_active',
         'sort_order',
     ];
 
     protected $casts = [
-        'options' => 'array',
+        'options'    => 'array',
+        'options_en' => 'array',
         'rules_json' => 'array',
-        'required' => 'boolean',
+        'required'   => 'boolean',
         'filterable' => 'boolean',
-        'is_active' => 'boolean',
+        'is_active'  => 'boolean',
     ];
 }

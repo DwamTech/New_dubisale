@@ -34,7 +34,11 @@ use App\Http\Controllers\ListingReportController;
 
 use App\Http\Controllers\OtpController;
 
+// ─── All non-admin routes use set.lang middleware ────────────────────────────
+Route::middleware('set.lang')->group(function () {
+
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/admin/login', [AuthController::class, 'adminLogin']);
 
 // OTP Routes
 Route::prefix('otp')->group(function () {
@@ -44,26 +48,30 @@ Route::prefix('otp')->group(function () {
 
 Route::get('v1/test', fn() => response()->json(['ok' => true]));
 
-// Public Category Fields Route
-Route::get('category-fields', [CategoryFieldsController::class, 'index']);
-// Public Categories Route
-Route::get('categories', [categoryController::class, 'index']);
-//public governorates routes
-Route::get('governorates', [GovernorateController::class, 'index']);
-Route::get('governorates/{governorate}/cities', [GovernorateController::class, 'cities']);
+// ─── Public routes with language support ────────────────────────────────────
+    // Category Fields
+    Route::get('category-fields', [CategoryFieldsController::class, 'index']);
+    // Categories
+    Route::get('categories', [categoryController::class, 'index']);
+    // Governorates & Cities
+    Route::get('governorates', [GovernorateController::class, 'index']);
+    Route::get('governorates/{governorate}/cities', [GovernorateController::class, 'cities']);
+    // Makes & Models
+    Route::get('makes', [MakeController::class, 'index']);
+    Route::get('makes/{make}/models', [MakeController::class, 'models']);
+    // Sections
+    Route::get('/main-sections', [CategorySectionsController::class, 'index']);
+    Route::get('/sub-sections/{mainSection}', [CategorySectionsController::class, 'subSections']);
+    // System Settings
+    Route::get('/system-settings', [SystemSettingController::class, 'index']);
+    // Banners
+    Route::get('banners', [BannerController::class, 'index']);
+    // Plan prices
+    Route::get('/plan-prices', [SubscriptionController::class, 'pricesByCategory']);
+});
 
-//public makes routes
-Route::get('makes', [MakeController::class, 'index']);
 
-Route::get('makes/{make}/models', [MakeController::class, 'models']);
 
-//public main category
-Route::get('/main-sections', [CategorySectionsController::class, 'index']);
-Route::get('/sub-sections/{mainSection}', [CategorySectionsController::class, 'subSections']);
-
-Route::get('/system-settings', [SystemSettingController::class, 'index']);
-
-Route::get('/plan-prices', [SubscriptionController::class, 'pricesByCategory']);
 
 //public listing for specific user
 Route::get('users/{user}', [UserController::class, 'showUserWithListings']);
@@ -72,8 +80,6 @@ Route::get('/the-best/{section}', [BestAdvertiserController::class, 'index']);
 
 // Global Search across all listings
 Route::get('/listings/search', [ListingController::class, 'globalSearch']);
-
-Route::get('banners', [BannerController::class, 'index']);
 
 
 Route::prefix('v1/{section}')->group(function () {
@@ -112,6 +118,8 @@ Route::prefix('v1/{section}')->group(function () {
     });
 });
 
+
+//}); // end set.lang group
 
 Route::prefix('admin')
     ->middleware(['auth:sanctum', 'admin'])
@@ -260,8 +268,7 @@ Route::prefix('admin')
 
 Route::get('/all-cars', [CarController::class, 'index']);
 Route::middleware('auth:sanctum')->post('/add-car', [CarController::class, 'store']);
-
-// Route::get('/values/{categorySlug?}', [CategoryFieldsController::class, 'index']);
+ Route::get('/values/{categorySlug?}', [CategoryFieldsController::class, 'index']);
 
 
 Route::middleware('auth:sanctum')->group(function () {

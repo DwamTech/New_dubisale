@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use App\Models\SystemSetting;
+use App\Traits\LocalizedResponse;
 
 class SystemSettingController extends Controller
 {
+    use LocalizedResponse;
     protected array $allowedKeys = [
         'support_number',
         'panner_image',
@@ -34,6 +36,13 @@ class SystemSettingController extends Controller
         'home_ad_image'
     ];
 
+    // المفاتيح اللي بتدعم قيمة إنجليزية منفصلة
+    protected array $bilingualKeys = [
+        'panner_image',
+        'privacy_policy',
+        'terms_conditions-main_',
+    ];
+
     // مفاتيح حسب النوع
     protected array $booleanKeys = ['show_phone','manual_approval','enable_global_external_notif'];
     protected array $integerKeys = ['featured_users_count','free_ads_count','free_ads_max_price','featured_user_max_ads', 'free_ad_days_validity'];
@@ -41,25 +50,34 @@ class SystemSettingController extends Controller
     protected function rules(): array
     {
         return [
-            'support_number'        => ['nullable', 'string', 'max:255'],
-            'sub_support_number'    => ['nullable', 'string', 'max:255'],
-            'emergency_number'      => ['nullable', 'string', 'max:255'],
-            'panner_image'          => ['nullable', 'string', 'max:1024'],
-            'privacy_policy'        => ['nullable', 'string'],
-            'terms_conditions-main_' => ['nullable', 'string'],
-            'facebook'              => ['nullable', 'url', 'max:1024'],
-            'twitter'               => ['nullable', 'url', 'max:1024'],
-            'instagram'             => ['nullable', 'url', 'max:1024'],
-            'email'                 => ['nullable', 'email', 'max:255'],
-            'show_phone'            => ['nullable', 'boolean'],
-            'featured_users_count'  => ['nullable', 'integer', 'min:0', 'max:100'],
-            'manual_approval'=>['nullable','boolean'],
+            'support_number'             => ['nullable', 'string', 'max:255'],
+            'sub_support_number'         => ['nullable', 'string', 'max:255'],
+            'emergency_number'           => ['nullable', 'string', 'max:255'],
+            'panner_image'               => ['nullable', 'string', 'max:1024'],
+            'panner_image_en'            => ['nullable', 'string', 'max:1024'],
+            'privacy_policy'             => ['nullable', 'string'],
+            'privacy_policy_en'          => ['nullable', 'string'],
+            'terms_conditions-main_'     => ['nullable', 'string'],
+            'terms_conditions-main__en'  => ['nullable', 'string'],
+            'facebook'                   => ['nullable', 'url', 'max:1024'],
+            'twitter'                    => ['nullable', 'url', 'max:1024'],
+            'instagram'                  => ['nullable', 'url', 'max:1024'],
+            'email'                      => ['nullable', 'email', 'max:255'],
+            'show_phone'                 => ['nullable', 'boolean'],
+            'featured_users_count'       => ['nullable', 'integer', 'min:0', 'max:100'],
+            'manual_approval'            => ['nullable', 'boolean'],
             'enable_global_external_notif' => ['nullable', 'boolean'],
-            'free_ads_count'        => ['nullable', 'integer', 'min:0'],
-            'free_ads_max_price'    => ['nullable', 'integer', 'min:0'],
-            'free_ad_days_validity' => ['nullable', 'integer', 'min:1'],
-            'featured_user_max_ads' => ['nullable', 'integer', 'min:1'],
+            'free_ads_count'             => ['nullable', 'integer', 'min:0'],
+            'free_ads_max_price'         => ['nullable', 'integer', 'min:0'],
+            'free_ad_days_validity'      => ['nullable', 'integer', 'min:1'],
+            'featured_user_max_ads'      => ['nullable', 'integer', 'min:1'],
         ];
+    }
+
+    // بيرجع اسم الـ en field للمفتاح
+    protected function enKeyName(string $key): string
+    {
+        return $key . '_en';
     }
 
     protected function typeForKey(string $key): string
@@ -106,21 +124,30 @@ class SystemSettingController extends Controller
 
     public function index()
     {
-        $rows = SystemSetting::whereIn('key', $this->allowedKeys)->get(['key', 'value', 'type']);
+        $rows = SystemSetting::whereIn('key', $this->allowedKeys)->get(['key', 'value', 'value_en', 'type']);
         $map = [];
 
         foreach ($rows as $row) {
             $type = $row->type ?: $this->typeForKey($row->key);
             $map[$row->key] = $this->castForOutput($type, $row->value);
+
+            if (in_array($row->key, $this->bilingualKeys, true)) {
+                $map[$this->enKeyName($row->key)] = $this->castForOutput($type, $row->value_en);
+            }
         }
 
         foreach ($this->allowedKeys as $k) {
             if (!array_key_exists($k, $map)) {
                 $map[$k] = null;
             }
+            if (in_array($k, $this->bilingualKeys, true) && !array_key_exists($this->enKeyName($k), $map)) {
+                $map[$this->enKeyName($k)] = null;
+            }
         }
 
-        return response()->json($map);
+        return response()->json(
+            $this->localizeSettingsMap($map, $this->bilingualKeys)
+        );
     }
 
     public function store(Request $request)
@@ -134,11 +161,16 @@ class SystemSettingController extends Controller
 
         foreach ($payload as $key => $value) {
             $type = $this->typeForKey($key);
+            $enKey = $this->enKeyName($key);
+            $valueEn = in_array($key, $this->bilingualKeys, true)
+                ? ($validated[$enKey] ?? null)
+                : null;
 
             SystemSetting::updateOrCreate(
                 ['key' => $key],
                 [
                     'value'    => $this->castForStorage($key, $value),
+                    'value_en' => $valueEn !== null ? (string) $valueEn : null,
                     'type'     => $type,
                     'group'    => $this->groupForKey($key),
                     'autoload' => true,
@@ -148,9 +180,23 @@ class SystemSettingController extends Controller
             $this->forgetCache($key);
 
             $ttl = now()->addHours(6);
-            $cacheKey = "settings:{$key}";
-            $cachedVal = $this->castForOutput($type, $this->castForStorage($key, $value));
-            Cache::put($cacheKey, $cachedVal, $ttl);
+            Cache::put("settings:{$key}", $this->castForOutput($type, $this->castForStorage($key, $value)), $ttl);
+            if ($valueEn !== null) {
+                Cache::put("settings:{$enKey}", $valueEn, $ttl);
+            }
+        }
+
+        // حفظ الـ en-only fields لو اتبعتوا بدون الـ ar
+        foreach ($this->bilingualKeys as $key) {
+            $enKey = $this->enKeyName($key);
+            if (!isset($payload[$key]) && isset($validated[$enKey]) && $validated[$enKey] !== null) {
+                SystemSetting::updateOrCreate(
+                    ['key' => $key],
+                    ['value_en' => (string) $validated[$enKey]]
+                );
+                $this->forgetCache($key);
+                Cache::put("settings:{$enKey}", $validated[$enKey], now()->addHours(6));
+            }
         }
 
         return response()->json([
@@ -185,24 +231,42 @@ class SystemSettingController extends Controller
 
         foreach ($payload as $key => $value) {
             $type = $this->typeForKey($key);
+            $enKey = $this->enKeyName($key);
+            $valueEn = in_array($key, $this->bilingualKeys, true)
+                ? ($validated[$enKey] ?? null)
+                : null;
 
             SystemSetting::updateOrCreate(
                 ['key' => $key],
                 [
                     'value'    => $this->castForStorage($key, $value),
+                    'value_en' => $valueEn !== null ? (string) $valueEn : null,
                     'type'     => $type,
                     'group'    => $this->groupForKey($key),
                     'autoload' => true,
                 ]
             );
 
-            // مهم: امسح الكاش فورًا
             $this->forgetCache($key);
 
             $ttl = now()->addHours(6);
-            $cacheKey = "settings:{$key}";
-            $cachedVal = $this->castForOutput($type, $this->castForStorage($key, $value));
-            Cache::put($cacheKey, $cachedVal, $ttl);
+            Cache::put("settings:{$key}", $this->castForOutput($type, $this->castForStorage($key, $value)), $ttl);
+            if ($valueEn !== null) {
+                Cache::put("settings:{$enKey}", $valueEn, $ttl);
+            }
+        }
+
+        // تحديث الـ en-only fields لو اتبعتوا بدون الـ ar
+        foreach ($this->bilingualKeys as $key) {
+            $enKey = $this->enKeyName($key);
+            if (!isset($payload[$key]) && isset($validated[$enKey]) && $validated[$enKey] !== null) {
+                SystemSetting::updateOrCreate(
+                    ['key' => $key],
+                    ['value_en' => (string) $validated[$enKey]]
+                );
+                $this->forgetCache($key);
+                Cache::put("settings:{$enKey}", $validated[$enKey], now()->addHours(6));
+            }
         }
 
         return response()->json(['status' => 'ok']);

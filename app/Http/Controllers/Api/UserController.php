@@ -36,13 +36,11 @@ class UserController extends Controller
         $code = UserClient::where('user_id', $user->id)->first();
 
         if (!$user) {
-            return response([
-                'message' => 'User not authenticated'
-            ], 401);
+            return response(['message' => __('api.unauthenticated')], 401);
         }
 
         return response([
-            'message' => 'Profile fetched successfully',
+            'message' => __('api.profile_fetched'),
             'data' => $user,
             'code' => $code->user_id ?? null
         ], 200);
@@ -53,9 +51,7 @@ class UserController extends Controller
         $user = $request->user();
 
         if (!$user) {
-            return response([
-                'message' => 'User not authenticated'
-            ], 401);
+            return response(['message' => __('api.unauthenticated')], 401);
         }
 
         $validated = $request->validate([
@@ -71,9 +67,7 @@ class UserController extends Controller
         if (!empty($validated['referral_code'])) {
             // Don't allow changing referral_code if already set
             if (!empty($user->referral_code) && $user->referral_code !== $validated['referral_code']) {
-                return response([
-                    'message' => 'You cannot change your delegate code once it has been set.'
-                ], 422);
+                return response(['message' => __('api.delegate_code_locked')], 422);
             }
 
             // Check if referral_code is a valid user ID who is a representative
@@ -81,11 +75,7 @@ class UserController extends Controller
                 ->where('role', 'representative')
                 ->first();
 
-            if (!$delegateUser) {
-                return response([
-                    'message' => 'Invalid delegate code. Please check the code and try again.'
-                ], 404);
-            }
+                return response(['message' => __('api.invalid_delegate_code')], 404);
 
             // Add user to delegate's clients list
             $userClient = UserClient::firstOrCreate(
@@ -105,11 +95,7 @@ class UserController extends Controller
 
         $user->update($validated);
 
-        return response([
-            'message' => 'Profile updated successfully',
-            'data' => $user->fresh(),
-
-        ], 200);
+        return response(['message' => __('api.profile_updated'), 'data' => $user->fresh()], 200);
     }
 
     //my ads 
@@ -318,18 +304,12 @@ class UserController extends Controller
             ->first();
 
         if (!$ad) {
-            return response()->json([
-                'status' => false,
-                'message' => 'الإعلان غير موجود في هذا القسم.',
-            ], 404);
+            return response()->json(['status' => false, 'message' => __('api.rank_not_found')], 404);
         }
 
         $user = $request->user();
         if ($ad->user_id !== ($user->id ?? null)) {
-            return response()->json([
-                'status' => false,
-                'message' => 'لا يمكنك تعديل ترتيب إعلان لا تملكه.',
-            ], 403);
+            return response()->json(['status' => false, 'message' => __('api.rank_not_owner')], 403);
         }
 
         $cooldownHours = 24;
@@ -341,17 +321,14 @@ class UserController extends Controller
 
             return response()->json([
                 'status' => false,
-                'message' => "يمكنك رفع الإعلان مرة كل 24 ساعة. المُتبقي تقريبًا: {$hrs} ساعة.",
+                'message' => __('api.rank_cooldown', ['hours' => $hrs]),
             ], 429);
         }
 
 
         $ok = $this->makeRankOne($categoryId, $ad->id);
         if (!$ok) {
-            return response()->json([
-                'status' => false,
-                'message' => 'حدث خطأ أثناء تحديث الترتيب.',
-            ], 500);
+            return response()->json(['status' => false, 'message' => __('api.rank_error')], 500);
         }
 
         $expires = now()->addHours($cooldownHours);
@@ -359,7 +336,7 @@ class UserController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => "تم رفع الإعلان #{$ad->id} إلى الترتيب الأول في قسم {$sec->name}.",
+            'message' => __('api.rank_updated', ['id' => $ad->id, 'section' => $sec->name]),
         ]);
     }
 
@@ -382,9 +359,7 @@ class UserController extends Controller
 
         $user->currentAccessToken()?->delete();
 
-        return response()->json([
-            'message' => 'Successfully logged out from API'
-        ], 200);
+        return response()->json(['message' => __('api.logout_success')], 200);
     }
 
     //Admin control
@@ -394,18 +369,11 @@ class UserController extends Controller
             $user->update([
                 'status' => 'active'
             ]);
-            return response()->json([
-                'message' => 'User unblocked successfully.'
-            ], 200);
+            return response()->json(['message' => __('api.user_unblocked')], 200);
         } else {
-            $user->update([
-                'status' => 'blocked'
-            ]);
+            $user->update(['status' => 'blocked']);
             $user->tokens()->delete();
-
-            return response()->json([
-                'message' => 'User blocked successfully.'
-            ], 200);
+            return response()->json(['message' => __('api.user_blocked')], 200);
         }
     }
 
@@ -618,10 +586,7 @@ class UserController extends Controller
 
         $user->loadCount('listings');
 
-        return response()->json([
-            'message' => 'User created successfully',
-            'user' => $this->formatUserSummary($user),
-        ], 201);
+        return response()->json(['message' => __('api.user_created'), 'user' => $this->formatUserSummary($user)], 201);
     }
 
     // Admin: Update user data
@@ -642,11 +607,7 @@ class UserController extends Controller
         }
         $user->save();
 
-        $user->loadCount('listings');
-        return response()->json([
-            'message' => 'User updated successfully',
-            'user' => $this->formatUserSummary($user),
-        ]);
+        return response()->json(['message' => __('api.user_updated'), 'user' => $this->formatUserSummary($user)]);
     }
 
     // Admin: Delete user
@@ -656,7 +617,7 @@ class UserController extends Controller
         $user->tokens()->delete();
         $user->delete();
 
-        return response()->json(['message' => 'User deleted successfully']);
+        return response()->json(['message' => __('api.user_deleted')]);
     }
 
     // Helper: format user output consistently
@@ -691,7 +652,7 @@ class UserController extends Controller
         // Check if user already is a representative
         if ($user->role === 'representative') {
             return response()->json([
-                'message' => 'You are already a representative',
+                'message'   => __('api.already_representative'),
                 'user_code' => (string) $user->id,
                 'role' => $user->role,
                 // Backward compatibility - old structure
@@ -711,7 +672,7 @@ class UserController extends Controller
         $user->save();
 
         return response()->json([
-            'message' => 'You are now a representative. Your delegate code is: ' . $user->id,
+            'message'   => __('api.now_representative', ['code' => $user->id]),
             'user_code' => (string) $user->id,
             'role' => $user->role,
             // Backward compatibility - old structure
@@ -733,20 +694,17 @@ class UserController extends Controller
 
         // Check if user is a representative
         if ($user->role !== 'representative') {
-            return response()->json([
-                'message' => 'Only representatives can view their clients',
-                'data' => []
-            ], 403);
+            return response()->json(['message' => __('api.not_representative'), 'data' => []], 403);
         }
 
         $userClient = UserClient::where('user_id', $user->id)->first();
 
         if (!$userClient || empty($userClient->clients)) {
             return response()->json([
-                'message' => 'No clients found',
-                'user_code' => (string) $user->id,
+                'message'       => __('api.no_clients'),
+                'user_code'     => (string) $user->id,
                 'clients_count' => 0,
-                'data' => []
+                'data'          => [],
             ]);
         }
 
@@ -768,10 +726,10 @@ class UserController extends Controller
             });
 
         return response()->json([
-            'message' => 'Clients retrieved successfully',
-            'user_code' => (string) $user->id,
+            'message'       => __('api.clients_fetched'),
+            'user_code'     => (string) $user->id,
             'clients_count' => $clients->count(),
-            'data' => $clients
+            'data'          => $clients,
         ]);
     }
 
@@ -793,7 +751,7 @@ class UserController extends Controller
         //     'system',
         //     ['reason' => 'otp_created']
         // );
-        return response()->json(['message' => 'Otp created successfully', 'otp' => $user->otp]);
+        return response()->json(['message' => __('api.otp_created'), 'otp' => $user->otp]);
     }
 
     //user verify otp
@@ -805,11 +763,11 @@ class UserController extends Controller
 
         $user = User::where('id', $request->user()->id)->first();
         if ($user->otp != $request->otp) {
-            return response()->json(['message' => 'Invalid otp'], 401);
+            return response()->json(['message' => __('api.invalid_otp')], 401);
         }
         $user->otp_verified = true;
         $user->save();
-        return response()->json(['message' => 'Otp verified successfully']);
+        return response()->json(['message' => __('api.otp_verified')]);
     }
 
 
@@ -825,18 +783,11 @@ class UserController extends Controller
         ])->first();
 
         if (!$listing) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Ad not found',
-            ], 404);
+            return response()->json(['success' => false, 'message' => __('api.ad_not_found')], 404);
         }
 
         if ($listing->isPayment) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Ad already paid',
-                'listing_id' => $listing->id,
-            ]);
+            return response()->json(['success' => true, 'message' => __('api.ad_already_paid'), 'listing_id' => $listing->id]);
         }
 
         $request->validate([

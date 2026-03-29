@@ -53,10 +53,7 @@ class ListingReportController extends Controller
             ['listing_id' => $listing->id, 'report_id' => $report->id]
         );
 
-        return response()->json([
-            'message' => 'Report submitted successfully',
-            'report' => $report,
-        ], 201);
+        return response()->json(['message' => __('api.report_submitted'), 'report' => $report], 201);
     }
 
     /**
@@ -163,9 +160,7 @@ class ListingReportController extends Controller
             );
         }
 
-        return response()->json([
-            'message' => 'Report accepted, listing has been rejected.',
-        ]);
+        return response()->json(['message' => __('api.report_accepted')]);
     }
 
     /**
@@ -218,9 +213,7 @@ class ListingReportController extends Controller
             );
         }
 
-        return response()->json([
-            'message' => 'Report dismissed, listing remains valid.',
-        ]);
+        return response()->json(['message' => __('api.report_dismissed')]);
     }
 
 

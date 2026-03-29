@@ -11,6 +11,7 @@ class SystemSetting extends Model
     protected $fillable = [
         'key',
         'value',
+        'value_en',
         'type',
         'group',
         'label',

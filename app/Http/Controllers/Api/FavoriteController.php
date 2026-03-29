@@ -63,25 +63,15 @@ class FavoriteController extends Controller
 
         if ($existing) {
             $existing->delete();
-            return response()->json([
-                'message' => 'تم إزالة الإعلان من المفضلة',
-                'favorited' => false,
-            ]);
+            return response()->json(['message' => __('api.favorite_removed'), 'favorited' => false]);
         }
 
         $ad = Listing::find($data['ad_id']);
         $slug = Section::fromId($ad->category_id)->slug;
 
-        Favorite::create([
-            'user_id' => $user->id,
-            'ad_id' => $ad->id,
-            'category_slug' => $slug,
-        ]);
+        Favorite::create(['user_id' => $user->id, 'ad_id' => $ad->id, 'category_slug' => $slug]);
 
-        return response()->json([
-            'message' => 'تم إضافة الإعلان إلى المفضلة',
-            'favorited' => true,
-        ], 201);
+        return response()->json(['message' => __('api.favorite_added'), 'favorited' => true], 201);
     }
 }
 

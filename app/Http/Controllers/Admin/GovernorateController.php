@@ -5,45 +5,52 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Governorate;
 use App\Models\City;
+use App\Traits\LocalizedResponse;
 use Illuminate\Http\Request;
 
 class GovernorateController extends Controller
 {
+    use LocalizedResponse;
+
     public function index()
     {
         $items = Governorate::with('cities')->orderBy('name')->get();
         $items->push((object)[
-            'id' => null,
-            'name' => 'غير ذلك',
-            'cities' => []
+            'id' => null, 'name' => 'غير ذلك', 'name_en' => 'Other', 'cities' => []
         ]);
-        return response()->json($items);
+
+        return response()->json(
+            $this->localizeCollection($items, ['name'])
+        );
     }
 
     public function storeGov(Request $request)
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:191', 'unique:governorates,name'],
+            'name'    => ['required', 'string', 'max:191', 'unique:governorates,name'],
+            'name_en' => ['nullable', 'string', 'max:191'],
         ]);
 
-        $gov = Governorate::create(['name' => $data['name']]);
+        $gov = Governorate::create($data);
 
-        // إضافة مدينة "غير ذلك" تلقائيًا
         City::create([
-            'name' => 'غير ذلك',
+            'name'    => 'غير ذلك',
+            'name_en' => 'Other',
             'governorate_id' => $gov->id,
         ]);
 
         return response()->json($gov->load('cities'), 201);
     }
+
     public function storCities(Request $request, Governorate $governorate)
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:191', 'unique:cities,name,NULL,id,governorate_id,' . $governorate->id],
+            'name'    => ['required', 'string', 'max:191', 'unique:cities,name,NULL,id,governorate_id,' . $governorate->id],
+            'name_en' => ['nullable', 'string', 'max:191'],
         ]);
 
         $city = City::create([
-            'name' => $data['name'],
+            ...$data,
             'governorate_id' => $governorate->id,
         ]);
 
@@ -53,12 +60,11 @@ class GovernorateController extends Controller
     public function updateGov(Request $request, Governorate $governorate)
     {
         $data = $request->validate([
-            'name' => ['sometimes', 'string', 'max:191', 'unique:governorates,name,' . $governorate->id],
+            'name'    => ['sometimes', 'string', 'max:191', 'unique:governorates,name,' . $governorate->id],
+            'name_en' => ['nullable', 'string', 'max:191'],
         ]);
 
-        if (array_key_exists('name', $data)) {
-            $governorate->update(['name' => $data['name']]);
-        }
+        $governorate->update($data);
 
         return response()->json($governorate->load('cities'));
     }
@@ -87,11 +93,12 @@ class GovernorateController extends Controller
     {
         $cities = $governorate->cities()->orderBy('name')->get();
         $cities->push((object)[
-            'id' => null,
-            'name' => 'غير ذلك',
-            'governorate_id' => $governorate->id
+            'id' => null, 'name' => 'غير ذلك', 'name_en' => 'Other', 'governorate_id' => $governorate->id
         ]);
-        return response()->json($cities);
+
+        return response()->json(
+            $this->localizeCollection($cities, ['name'])
+        );
     }
 
     // public function addCity(Request $request, Governorate $governorate)
@@ -111,7 +118,8 @@ class GovernorateController extends Controller
     public function updateCity(Request $request, City $city)
     {
         $data = $request->validate([
-            'name' => ['sometimes', 'string', 'max:191', 'unique:cities,name,' . $city->id . ',id,governorate_id,' . $city->governorate_id],
+            'name'           => ['sometimes', 'string', 'max:191', 'unique:cities,name,' . $city->id . ',id,governorate_id,' . $city->governorate_id],
+            'name_en'        => ['nullable', 'string', 'max:191'],
             'governorate_id' => ['sometimes', 'integer', 'exists:governorates,id'],
         ]);
 

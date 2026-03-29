@@ -14,16 +14,18 @@ class StoreCategoryFieldRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_slug' => ['required', 'string', 'max:100'],
-            'field_name'    => ['required', 'string', 'max:100', 'unique:category_fields,field_name'],
-            'display_name'  => ['required', 'string', 'max:150'],
-            'type'          => ['required', 'string', 'in:string,int,decimal,bool,date,json'],
-            'options'       => ['nullable', 'array'],   // لو dropdown
-            'required'      => ['boolean'],
-            'filterable'    => ['boolean'],
-            'rules_json'    => ['nullable', 'array'],
-            'sort_order'    => ['nullable', 'integer'],
-            'is_active'     => ['boolean'],
+            'category_slug'  => ['required', 'string', 'max:100'],
+            'field_name'     => ['required', 'string', 'max:100', 'unique:category_fields,field_name'],
+            'display_name'   => ['required', 'string', 'max:150'],
+            'display_name_en'=> ['nullable', 'string', 'max:150'],
+            'type'           => ['required', 'string', 'in:string,int,decimal,bool,date,json'],
+            'options'        => ['nullable', 'array'],
+            'options_en'     => ['nullable', 'array'],
+            'required'       => ['boolean'],
+            'filterable'     => ['boolean'],
+            'rules_json'     => ['nullable', 'array'],
+            'sort_order'     => ['nullable', 'integer'],
+            'is_active'      => ['boolean'],
         ];
     }
 
@@ -31,12 +33,10 @@ class StoreCategoryFieldRequest extends FormRequest
     {
         $data = $this->all();
 
-        if (isset($data['options']) && is_string($data['options'])) {
-            $decoded = json_decode($data['options'], true);
-            if (json_last_error() === JSON_ERROR_NONE) {
-                $data['options'] = $decoded;
-            } else {
-                $data['options'] = [$data['options']];
+        foreach (['options', 'options_en'] as $key) {
+            if (isset($data[$key]) && is_string($data[$key])) {
+                $decoded = json_decode($data[$key], true);
+                $data[$key] = json_last_error() === JSON_ERROR_NONE ? $decoded : [$data[$key]];
             }
         }
 

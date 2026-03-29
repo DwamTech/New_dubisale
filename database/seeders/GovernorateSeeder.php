@@ -3,31 +3,25 @@
 namespace Database\Seeders;
 
 use App\Models\Governorate;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class GovernorateSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-
-
         $governorates = [
-            'القاهرة',
-            'الجيزة',
-            'الإسكندرية',
-            'الدقهلية',
-            'الشرقية',
-            'القليوبية',
-            'أسوان',
-            'السويس',
+            ['name' => 'القاهرة',      'name_en' => 'Cairo'],
+            ['name' => 'الجيزة',       'name_en' => 'Giza'],
+            ['name' => 'الإسكندرية',   'name_en' => 'Alexandria'],
+            ['name' => 'الدقهلية',     'name_en' => 'Dakahlia'],
+            ['name' => 'الشرقية',      'name_en' => 'Sharqia'],
+            ['name' => 'القليوبية',    'name_en' => 'Qalyubia'],
+            ['name' => 'أسوان',        'name_en' => 'Aswan'],
+            ['name' => 'السويس',       'name_en' => 'Suez'],
         ];
 
-        foreach ($governorates as $name) {
-            Governorate::create(['name' => $name]);
+        foreach ($governorates as $data) {
+            Governorate::updateOrCreate(['name' => $data['name']], $data);
         }
     }
 }

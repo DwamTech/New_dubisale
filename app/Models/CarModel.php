@@ -11,7 +11,7 @@ class CarModel extends Model
     //
     use HasFactory;
 protected $table='models';
-    protected $fillable = ['name', 'make_id'];
+    protected $fillable = ['name', 'name_en', 'make_id'];
 
     public function make()
     {

@@ -4,14 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\UserClient;
+use App\Traits\LocalizedResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class UserClientController extends Controller
 {
-    /**
-     * رجّع كل سجلات user_clients (ممكن تبقى للادمن مثلاً).
-     */
+    use LocalizedResponse;
+
     public function index(): JsonResponse
     {
         $data = UserClient::with('user')->get();
@@ -22,9 +22,6 @@ class UserClientController extends Controller
         ]);
     }
 
-    /**
-     * رجّع clients الخاصين بـ user معيّن عن طريق user_id.
-     */
     public function show(int $userId): JsonResponse
     {
         $userClient = UserClient::where('user_id', $userId)->first();
@@ -32,7 +29,7 @@ class UserClientController extends Controller
         if (! $userClient) {
             return response()->json([
                 'success' => false,
-                'message' => 'Record not found for this user.',
+                'message' => __('api.user_client_not_found'),
             ], 404);
         }
 
@@ -45,9 +42,6 @@ class UserClientController extends Controller
         ]);
     }
 
-    /**
-     * إنشاء سجل جديد لمستخدم (لو ماعندوش record قبل كده).
-     */
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -56,12 +50,11 @@ class UserClientController extends Controller
             'clients.*'   => ['integer'],
         ]);
 
-        // لو فيه record لنفس اليوزر، نمنع التكرار
         $existing = UserClient::where('user_id', $validated['user_id'])->first();
         if ($existing) {
             return response()->json([
                 'success' => false,
-                'message' => 'Record already exists for this user. Use update instead.',
+                'message' => __('api.user_client_exists'),
             ], 422);
         }
 
@@ -72,14 +65,11 @@ class UserClientController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'User clients record created successfully.',
+            'message' => __('api.user_client_created'),
             'data'    => $userClient,
         ], 201);
     }
 
-    /**
-     * تحديث قائمة clients بالكامل ليوزر معيّن.
-     */
     public function update(Request $request, int $userId): JsonResponse
     {
         $validated = $request->validate([
@@ -92,7 +82,7 @@ class UserClientController extends Controller
         if (! $userClient) {
             return response()->json([
                 'success' => false,
-                'message' => 'Record not found for this user.',
+                'message' => __('api.user_client_not_found'),
             ], 404);
         }
 
@@ -101,14 +91,11 @@ class UserClientController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Clients updated successfully.',
+            'message' => __('api.user_client_updated'),
             'data'    => $userClient,
         ]);
     }
 
-    /**
-     * إضافة client جديد للّستة بدون ما نستبدلها.
-     */
     public function addClient(Request $request, int $userId): JsonResponse
     {
         $validated = $request->validate([
@@ -120,7 +107,7 @@ class UserClientController extends Controller
             ['clients' => []]
         );
 
-        $clients = $userClient->clients ?? [];
+        $clients   = $userClient->clients ?? [];
         $clients[] = $validated['client_id'];
 
         $userClient->clients = $clients;
@@ -128,14 +115,11 @@ class UserClientController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Client added successfully.',
+            'message' => __('api.user_client_added'),
             'data'    => $userClient,
         ]);
     }
 
-    /**
-     * حذف client من اللستة.
-     */
     public function removeClient(Request $request, int $userId): JsonResponse
     {
         $validated = $request->validate([
@@ -147,26 +131,24 @@ class UserClientController extends Controller
         if (! $userClient) {
             return response()->json([
                 'success' => false,
-                'message' => 'Record not found for this user.',
+                'message' => __('api.user_client_not_found'),
             ], 404);
         }
 
-        $clients = $userClient->clients ?? [];
-
-        $clients = array_values(array_filter($clients, function ($id) use ($validated) {
-            return (int) $id !== (int) $validated['client_id'];
-        }));
+        $clients = array_values(array_filter(
+            $userClient->clients ?? [],
+            fn($id) => (int) $id !== (int) $validated['client_id']
+        ));
 
         $userClient->clients = $clients;
         $userClient->save();
 
         return response()->json([
             'success' => true,
-            'message' => 'Client removed successfully.',
+            'message' => __('api.user_client_removed'),
             'data'    => $userClient,
         ]);
     }
-
 
     public function destroy(int $userId): JsonResponse
     {
@@ -175,7 +157,7 @@ class UserClientController extends Controller
         if (! $userClient) {
             return response()->json([
                 'success' => false,
-                'message' => 'Record not found for this user.',
+                'message' => __('api.user_client_not_found'),
             ], 404);
         }
 
@@ -183,7 +165,7 @@ class UserClientController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'User clients record deleted successfully.',
+            'message' => __('api.user_client_deleted'),
         ]);
     }
 }

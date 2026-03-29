@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\CanMonitorChat;
+use App\Http\Middleware\SetLanguage;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,8 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'admin' => AdminMiddleware::class,
+            'admin'            => AdminMiddleware::class,
             'can.monitor.chat' => CanMonitorChat::class,
+            'set.lang'         => SetLanguage::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

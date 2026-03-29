@@ -16,75 +16,54 @@ class AuthController extends Controller
     {
         $data = $request->validated();
 
-        // Try to find existing user by phone first, then by email
         $existingUser = null;
-        
         if (!empty($data['phone'])) {
             $existingUser = User::where('phone', $data['phone'])->first();
         }
-        
         if (!$existingUser && !empty($data['email'])) {
             $existingUser = User::where('email', $data['email'])->first();
         }
 
         if ($existingUser) {
-            // LOGIN FLOW - works for both phone and email
-
             if ($existingUser->status !== 'active') {
-                return response()->json(['message' => 'User is inactive. Please contact support.'], 403);
+                return response()->json(['message' => __('api.user_inactive')], 403);
             }
-
             if (!Hash::check($data['password'], $existingUser->password)) {
-                return response()->json(['message' => 'Invalid credentials'], 401);
+                return response()->json(['message' => __('api.invalid_credentials')], 401);
             }
-
             if (!empty($data['referral_code']) && $existingUser->referral_code !== $data['referral_code']) {
-                return response()->json(['message' => 'Invalid referral code'], 401);
+                return response()->json(['message' => __('api.invalid_referral_code')], 401);
             }
-
-            $message = "User logged in successfully.";
+            $message = __('api.login_success');
             $user = $existingUser;
         } else {
-            // REGISTRATION FLOW - requires phone number
-
             if (empty($data['phone'])) {
-                return response()->json([
-                    'message' => 'Phone number is required for registration. Email can only be used for login.'
-                ], 422);
+                return response()->json(['message' => __('api.phone_required')], 422);
             }
 
             if (!empty($data['referral_code'])) {
-                // Check if referral_code is a valid user ID who is a representative
                 $delegateUser = User::where('id', $data['referral_code'])
-                    ->where('role', 'representative')
-                    ->first();
-
+                    ->where('role', 'representative')->first();
                 if (!$delegateUser) {
-                    return response([
-                        'message' => 'Invalid delegate code. Please check the code and try again.'
-                    ], 404);
+                    return response()->json(['message' => __('api.invalid_delegate_code')], 404);
                 }
             }
 
             $user = User::create([
-                'name' => $data['name'] ?? null,
-                'phone' => $data['phone'],
-                'role' => 'user',
-                'password' => Hash::make($data['password']),
+                'name'         => $data['name'] ?? null,
+                'phone'        => $data['phone'],
+                'role'         => 'user',
+                'password'     => Hash::make($data['password']),
                 'country_code' => $data['country_code'] ?? null,
-                'referral_code' => $data['referral_code'] ?? null,
+                'referral_code'=> $data['referral_code'] ?? null,
             ]);
 
-            // If user registered with a delegate code, add them to the delegate's clients list
             if (!empty($data['referral_code'])) {
                 $userClient = UserClient::firstOrCreate(
                     ['user_id' => $data['referral_code']],
                     ['clients' => []]
                 );
-
                 $clients = $userClient->clients ?? [];
-
-                // Check if user is already in the list (shouldn't happen, but just in case)
                 if (!in_array($user->id, $clients)) {
                     $clients[] = $user->id;
                     $userClient->clients = $clients;
@@ -92,25 +71,46 @@ class AuthController extends Controller
                 }
             }
 
-
-            $message = "User registered successfully.";
+            $message = __('api.register_success');
         }
 
         $token = $user->createToken('nasmasr_token')->plainTextToken;
 
         return response()->json([
             'message' => $message,
-            'user' => new UserResource($user),
-            'token' => $token,
+            'user'    => new UserResource($user),
+            'token'   => $token,
         ], 201);
     }
 
+    public function adminLogin(Request $request)
+    {
+        $data = $request->validate([
+            'email'    => ['required', 'email'],
+            'password' => ['required', 'string'],
+        ]);
 
-    // admin change  password
+        $user = User::where('email', $data['email'])->where('role', 'admin')->first();
+
+        if (!$user || !Hash::check($data['password'], $user->password)) {
+            return response()->json(['message' => __('api.invalid_credentials')], 401);
+        }
+        if ($user->status !== 'active') {
+            return response()->json(['message' => __('api.account_inactive')], 403);
+        }
+
+        $token = $user->createToken('admin_token')->plainTextToken;
+
+        return response()->json([
+            'message' => __('api.admin_login_success'),
+            'user'    => new UserResource($user),
+            'token'   => $token,
+        ]);
+    }
+
     public function changePass(User $user)
     {
         $user->password = Hash::make('123456');
-
         $user->save();
         return response()->json([
             'message' => 'مرحبًا ' . $user->name . '، تم تغيير كلمة السر الخاصة بحسابك إلى: 123456. يرجى تسجيل الدخول وتغييرها بعد أول دخول. فريق ناس مصر',

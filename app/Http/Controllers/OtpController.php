@@ -41,9 +41,9 @@ class OtpController extends Controller
                     ->create($phone, "whatsapp");
 
                 return response()->json([
-                    'status' => $verification->status,
-                    'message' => 'OTP sent via WhatsApp',
-                    'channel' => 'whatsapp'
+                    'status'  => $verification->status,
+                    'message' => __('api.otp_sent_whatsapp'),
+                    'channel' => 'whatsapp',
                 ]);
             } catch (\Exception $e) {
                 // If WhatsApp fails, fallback to SMS
@@ -56,9 +56,9 @@ class OtpController extends Controller
                     ->create($phone, "sms");
                     
                 return response()->json([
-                    'status' => $verification->status,
-                    'message' => 'OTP sent via SMS (WhatsApp fallback)',
-                    'channel' => 'sms'
+                    'status'  => $verification->status,
+                    'message' => __('api.otp_sent_sms'),
+                    'channel' => 'sms',
                 ]);
             }
         } catch (\Exception $e) {
@@ -92,10 +92,10 @@ class OtpController extends Controller
                 ]);
 
             if ($verification_check->status === 'approved') {
-                return response()->json(['status' => 'approved', 'message' => 'OTP verified successfully']);
+                return response()->json(['status' => 'approved', 'message' => __('api.otp_verified_success')]);
             }
 
-            return response()->json(['status' => $verification_check->status, 'message' => 'Invalid OTP'], 400);
+            return response()->json(['status' => $verification_check->status, 'message' => __('api.otp_invalid')], 400);
 
         } catch (\Exception $e) {
             return response()->json(['error' => 'Verification failed', 'message' => $e->getMessage()], 500);

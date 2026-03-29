@@ -81,11 +81,11 @@ class NotificationController extends Controller
     {
         $user = $request->user();
         if ($notification->user_id !== $user->id) {
-            return response()->json(['message' => 'forbidden'], 403);
+            return response()->json(['message' => __('api.forbidden')], 403);
         }
         $notification->read_at = now();
         $notification->save();
-        return response()->json(['message' => 'ok']);
+        return response()->json(['message' => __('api.notification_read')]);
     }
 
     public function markAllRead(Request $request)
@@ -109,7 +109,7 @@ class NotificationController extends Controller
         if (!empty($data['id'])) {
             $n = Notification::find($data['id']);
             if (!$n || $n->user_id !== $user->id) {
-                return response()->json(['message' => 'forbidden'], 403);
+                return response()->json(['message' => __('api.forbidden')], 403);
             }
             $n->read_at = now();
             $n->save();

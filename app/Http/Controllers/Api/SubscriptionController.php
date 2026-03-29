@@ -69,7 +69,7 @@ class SubscriptionController extends Controller
             ->first();
         if ($existingSub) {
             return response()->json([
-                'message' => 'لديك اشتراك مدفوع فعّال لهذه الخطة بالفعل.',
+                'message'      => __('api.subscription_exists'),
                 'subscription' => $existingSub,
             ], 409);
         }
@@ -80,10 +80,10 @@ class SubscriptionController extends Controller
             $remain = $plan === 'featured' ? (int)$pkg->featured_ads_remaining : (int)$pkg->standard_ads_remaining;
             if ($activeByPlan && $remain > 0) {
                 return response()->json([
-                    'message' => 'لديك باقة فعّالة ورصيد متاح لهذه الخطة، استخدم الباقة بدل الاشتراك.',
-                    'package_id' => $pkg->id,
-                    'plan' => $plan,
-                    'remaining' => $remain,
+                    'message'     => __('api.use_package_instead'),
+                    'package_id'  => $pkg->id,
+                    'plan'        => $plan,
+                    'remaining'   => $remain,
                     'expire_date' => $plan === 'featured' ? $pkg->featured_expire_date : $pkg->standard_expire_date,
                 ], 422);
             }
@@ -91,9 +91,7 @@ class SubscriptionController extends Controller
 
         $prices = CategoryPlanPrice::where('category_id', $sec->id())->first();
         if (!$prices) {
-            return response()->json([
-                'message' => 'لم يتم ضبط أسعار هذه الباقة لهذا القسم بعد. برجاء مراجعة الإدارة.',
-            ], 422);
+            return response()->json(['message' => __('api.no_prices_set')], 422);
         }
 
         $days = $plan === 'featured'
@@ -156,10 +154,7 @@ class SubscriptionController extends Controller
                 ]);
         }
 
-        return response()->json([
-            'message'      => 'Subscription created',
-            'subscription' => $sub,
-        ], 201);
+        return response()->json(['message' => __('api.subscription_created'), 'subscription' => $sub], 201);
     }
 
     public function mySubscription(Request $request)

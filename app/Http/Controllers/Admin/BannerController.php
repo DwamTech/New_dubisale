@@ -4,102 +4,72 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CategoryBanner;
+use App\Traits\LocalizedResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 class BannerController extends Controller
 {
-    // The list of allowed slugs
+    use LocalizedResponse;
     protected $allowedSlugs = [
-        'real_estate',
-        'cars',
-        'cars_rent',
-        'spare-parts',
-        'stores',
-        'restaurants',
-        'groceries',
-        'food-products',
-        'electronics',
-        'home-appliances',
-        'home-tools',
-        'furniture',
-        'doctors',
-        'health',
-        'teachers',
-        'education',
-        'jobs',
-        'shipping',
-        'mens-clothes',
-        'watches-jewelry',
-        'free-professions',
-        'kids-toys',
-        'gym',
-        'construction',
-        'maintenance',
-        'car-services',
-        'home-services',
-        'lighting-decor',
-        'animals',
-        'farm-products',
-        'wholesale',
-        'production-lines',
-        'light-vehicles',
-        'heavy-transport',
-        'tools',
-        'missing',
-        'home_ads',
-        'home',
-        'unified' // fallback
+        'real_estate', 'cars', 'cars_rent', 'spare-parts', 'stores',
+        'restaurants', 'groceries', 'food-products', 'electronics',
+        'home-appliances', 'home-tools', 'furniture', 'doctors', 'health',
+        'teachers', 'education', 'jobs', 'shipping', 'mens-clothes',
+        'watches-jewelry', 'free-professions', 'kids-toys', 'gym',
+        'construction', 'maintenance', 'car-services', 'home-services',
+        'lighting-decor', 'animals', 'farm-products', 'wholesale',
+        'production-lines', 'light-vehicles', 'heavy-transport', 'tools',
+        'missing', 'home_ads', 'home', 'unified',
     ];
 
     public function index()
     {
         $dbBanners = CategoryBanner::all()->keyBy('slug');
+        $lang = $this->lang();
         $banners = [];
 
         foreach ($this->allowedSlugs as $slug) {
-            $bannerUrl = null;
-            if (isset($dbBanners[$slug]) && $dbBanners[$slug]->banner_path) {
-                // If path stored is relative like "storage/...", wrap in asset()
-                // If stored as full path, use as is. Assuming relative "storage/uploads/..."
-                $bannerUrl = asset($dbBanners[$slug]->banner_path);
-            }
+            $row = $dbBanners[$slug] ?? null;
+            $arUrl = $row?->banner_path    ? asset($row->banner_path)    : null;
+            $enUrl = $row?->banner_path_en ? asset($row->banner_path_en) : null;
 
-            $banners[] = [
-                'slug' => $slug,
-                'banner_url' => $bannerUrl
-            ];
+            if ($lang === 'ar') {
+                $banners[] = ['slug' => $slug, 'banner_url' => $arUrl];
+            } elseif ($lang === 'en') {
+                $banners[] = ['slug' => $slug, 'banner_url' => $enUrl ?? $arUrl];
+            } else {
+                $banners[] = ['slug' => $slug, 'banner_url' => $arUrl, 'banner_url_en' => $enUrl];
+            }
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $banners
-        ]);
+        return response()->json(['success' => true, 'data' => $banners]);
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'slug' => 'required|string|in:' . implode(',', $this->allowedSlugs),
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:4096'
+            'slug'  => 'required|string|in:' . implode(',', $this->allowedSlugs),
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:4096',
+            'lang'  => 'nullable|in:ar,en',
         ]);
 
         $slug = $request->input('slug');
+        $lang = $request->input('lang', 'ar');
 
-        // Check if banner already exists for this slug
         $exists = CategoryBanner::where('slug', $slug)->exists();
-        if ($exists) {
+        $field  = $lang === 'en' ? 'banner_path_en' : 'banner_path';
+
+        if ($exists && $lang === 'ar') {
             return response()->json([
                 'success' => false,
                 'message' => 'هذا القسم يحتوي على بانر بالفعل. يرجى استخدام التعديل لتغييره.',
-                'errors' => ['slug' => ['This category already has a banner.']]
+                'errors'  => ['slug' => ['This category already has a banner.']],
             ], 422);
         }
 
-        $file = $request->file('image');
-
-        return $this->handleBannerUpload($slug, $file);
+        return $this->handleBannerUpload($slug, $request->file('image'), $field);
     }
 
     public function update(Request $request, $slug)
@@ -108,68 +78,61 @@ class BannerController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'The selected slug is invalid.',
-                'errors' => ['slug' => ['The selected slug is invalid.']]
+                'errors'  => ['slug' => ['The selected slug is invalid.']],
             ], 422);
         }
 
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:4096'
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:4096',
+            'lang'  => 'nullable|in:ar,en',
         ]);
 
-        $file = $request->file('image');
+        $lang  = $request->input('lang', 'ar');
+        $field = $lang === 'en' ? 'banner_path_en' : 'banner_path';
 
-        return $this->handleBannerUpload($slug, $file);
+        return $this->handleBannerUpload($slug, $request->file('image'), $field);
     }
 
-    private function handleBannerUpload($slug, $file)
+    private function handleBannerUpload($slug, $file, string $field = 'banner_path')
     {
-        // Path structure: storage/uploads/banner/{slug}/filename
-        $directory = public_path("storage/uploads/banner/{$slug}");
+        $lang      = $field === 'banner_path_en' ? 'en' : 'ar';
+        $directory = public_path("storage/uploads/banner/{$slug}/{$lang}");
 
-        // Ensure directory exists
         if (!File::isDirectory($directory)) {
             File::makeDirectory($directory, 0755, true);
         }
 
-        // Clean existing files (optional, but good to keep folder clean)
-        // Also we might want to delete the old file referenced in DB
+        // حذف الصورة القديمة للغة دي بس
         $currentBanner = CategoryBanner::where('slug', $slug)->first();
-        if ($currentBanner && $currentBanner->banner_path) {
-            $oldPath = public_path($currentBanner->banner_path);
+        if ($currentBanner && $currentBanner->$field) {
+            $oldPath = public_path($currentBanner->$field);
             if (File::exists($oldPath)) {
                 File::delete($oldPath);
             }
         }
-        
-        // Also clean folder just in case (as per previous logic)
-        // But be careful if multiple records point to same folder (unlikely here)
-        $files = File::files($directory);
-        foreach ($files as $f) {
+
+        // حذف كل ملفات الفولدر
+        foreach (File::files($directory) as $f) {
             File::delete($f);
         }
 
-        // Save new file
-        $filename = Str::random(40) . '.' . $file->getClientOriginalExtension();
+        $filename     = Str::random(40) . '.' . $file->getClientOriginalExtension();
         $file->move($directory, $filename);
-        
-        $relativePath = "storage/uploads/banner/{$slug}/{$filename}";
+        $relativePath = "storage/uploads/banner/{$slug}/{$lang}/{$filename}";
 
-        // Update or Create DB record
         $banner = CategoryBanner::updateOrCreate(
             ['slug' => $slug],
-            [
-                'banner_path' => $relativePath,
-                'is_active' => true
-            ]
+            [$field => $relativePath, 'is_active' => true]
         );
 
         return response()->json([
             'success' => true,
             'message' => 'Banner updated successfully',
-            'data' => [
-                'slug' => $banner->slug,
-                'banner_url' => asset($banner->banner_path)
-            ]
+            'data'    => [
+                'slug'          => $banner->slug,
+                'banner_url'    => $banner->banner_path    ? asset($banner->banner_path)    : null,
+                'banner_url_en' => $banner->banner_path_en ? asset($banner->banner_path_en) : null,
+            ],
         ]);
     }
 }

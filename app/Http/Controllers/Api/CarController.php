@@ -62,8 +62,8 @@ class CarController extends Controller
         $car = Car::create($data);
 
         return response()->json([
-            'message' => 'Car added successfully.',
-            'car' => new CarResource($car),
+            'message' => __('api.car_added'),
+            'car'     => new CarResource($car),
         ], 201);
     }
 
@@ -78,28 +78,24 @@ class CarController extends Controller
     {
 
         if ($car->user_id !== auth()->id()) {
-            return response()->json(['message' => 'You are not authorized to update this car.'], 403);
+            return response()->json(['message' => __('api.car_unauthorized')], 403);
         }
-
 
         $data = $request->validated();
         $car->update($data);
 
-        return response()->json([
-            'message' => 'Car updated successfully.',
-            'car' => new CarResource($car),
-        ]);
+        return response()->json(['message' => __('api.car_updated'), 'car' => new CarResource($car)]);
     }
 
     public function destroy(Car $car)
     {
 
         if ($car->user_id !== auth()->id()) {
-            return response()->json(['message' => 'You are not authorized to update this car.'], 403);
+            return response()->json(['message' => __('api.car_unauthorized')], 403);
         }
 
         $car->delete();
 
-        return response()->json(['message' => 'Car deleted successfully.']);
+        return response()->json(['message' => __('api.car_deleted')]);
     }
 }

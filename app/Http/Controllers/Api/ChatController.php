@@ -33,9 +33,7 @@ class ChatController extends Controller
 
         // Prevent sending message to self
         if ($sender->id === $receiver->id) {
-            return response()->json([
-                'message' => 'لا يمكنك إرسال رسالة لنفسك',
-            ], 422);
+            return response()->json(['message' => __('api.cannot_message_self')], 422);
         }
 
         $attachmentPath = null;
@@ -58,7 +56,7 @@ class ChatController extends Controller
                 }
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::error('chat_upload_failed', ['error' => $e->getMessage(), 'user_id' => $sender->id]);
-                return response()->json(['message' => 'فشل رفع الملف، يرجى المحاولة مرة أخرى'], 500);
+                return response()->json(['message' => __('api.file_upload_failed')], 500);
             }
         }
 
@@ -86,7 +84,7 @@ class ChatController extends Controller
                 $this->notifyReceiver($sender, $receiver, $conversation);
 
                 return response()->json([
-                    'message' => 'تم إرسال الرسالة بنجاح',
+                    'message' => __('api.message_sent'),
                     'data' => [
                         'id' => $conversation->id,
                         'conversation_id' => $conversation->conversation_id,
@@ -103,7 +101,7 @@ class ChatController extends Controller
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($attachmentPath);
             }
             \Illuminate\Support\Facades\Log::error('chat_send_transaction_failed', ['error' => $e->getMessage()]);
-            return response()->json(['message' => 'حدث خطأ أثناء إرسال الرسالة'], 500);
+            return response()->json(['message' => __('api.message_send_error')], 500);
         }
     }
 
@@ -134,9 +132,7 @@ class ChatController extends Controller
 
         // Prevent viewing own conversation
         if ($currentUser->id === $user->id) {
-            return response()->json([
-                'message' => 'غير صالح',
-            ], 422);
+            return response()->json(['message' => __('api.invalid_conversation')], 422);
         }
 
         $perPage = (int) $request->query('per_page', 50);
@@ -211,7 +207,7 @@ class ChatController extends Controller
         $conversation = $this->chatService->sendSupportMessage($sender, $message);
 
         return response()->json([
-            'message' => 'تم إرسال رسالتك للدعم الفني بنجاح',
+            'message' => __('api.support_message_sent'),
             'data' => [
                 'id' => $conversation->id,
                 'conversation_id' => $conversation->conversation_id,
@@ -316,10 +312,7 @@ class ChatController extends Controller
             ->first();
 
         if (!$listing) {
-            return response()->json([
-                'success' => false,
-                'message' => 'الإعلان غير موجود',
-            ], 404);
+            return response()->json(['success' => false, 'message' => __('api.listing_not_found')], 404);
         }
 
         // Get default image for categories that use default images
