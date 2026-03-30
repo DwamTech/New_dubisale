@@ -591,8 +591,8 @@ class ListingController extends Controller
 
         $listing->increment('views');
         $viewer = request()->user();
-        if ($viewer->role != 'admin') {
-            if ($viewer && $viewer->id !== $listing->user_id) {
+        if ($viewer && $viewer->role !== 'admin') {
+            if ($viewer->id !== $listing->user_id) {
                 $notifications->dispatch(
                     (int) $listing->user_id,
                     __('api.listing_view_notify'),

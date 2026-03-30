@@ -884,6 +884,43 @@ class UserController extends Controller
         ]);
     }
 
+    // ── POST /api/guest/fcm-token (public, no auth required) ─────────────────
+
+    public function updateGuestFcmToken(Request $request)
+    {
+        $data = $request->validate([
+            'guest_uuid' => ['required', 'string', 'max:255'],
+            'fcm_token'  => ['required', 'string', 'max:255'],
+        ]);
+
+        $guest = User::where('guest_uuid', $data['guest_uuid'])->first();
+
+        if ($guest) {
+            $guest->fcm_token = $data['fcm_token'];
+            $guest->save();
+
+            return response()->json([
+                'message'    => __('api.guest_fcm_updated'),
+                'guest_uuid' => $guest->guest_uuid,
+                'fcm_token'  => $guest->fcm_token,
+            ]);
+        }
+
+        $guest = User::create([
+            'guest_uuid'             => $data['guest_uuid'],
+            'fcm_token'              => $data['fcm_token'],
+            'role'                   => 'guest',
+            'status'                 => 'active',
+            'receive_external_notif' => true,
+        ]);
+
+        return response()->json([
+            'message'    => __('api.guest_fcm_created'),
+            'guest_uuid' => $guest->guest_uuid,
+            'fcm_token'  => $guest->fcm_token,
+        ], 201);
+    }
+
     /**
      * Admin: Get all clients for a specific representative.
      * GET /api/admin/delegates/{user}/clients

@@ -40,6 +40,7 @@ class User extends Authenticatable
         'otp_verified_at',
         'role',
         'fcm_token',
+        'guest_uuid',
     ];
 
 

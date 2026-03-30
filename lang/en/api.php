@@ -15,6 +15,7 @@ return [
 
     // User / Profile
     'unauthenticated'           => 'Unauthenticated.',
+    'guest_not_found'           => 'Guest user not found. Please provide a valid guest_uuid.',
     'profile_fetched'           => 'Profile fetched successfully.',
     'profile_updated'           => 'Profile updated successfully.',
     'delegate_code_locked'      => 'You cannot change your delegate code once it has been set.',
@@ -114,6 +115,8 @@ return [
     // FCM
     'fcm_updated'               => 'FCM token updated successfully.',
     'fcm_deleted'               => 'FCM token deleted successfully.',
+    'guest_fcm_updated'         => 'Guest user found. FCM token updated successfully.',
+    'guest_fcm_created'         => 'New guest user created successfully.',
 
     // Listings (ListingController)
     'listing_unauthorized_edit2' => 'You are not authorized to edit this listing.',

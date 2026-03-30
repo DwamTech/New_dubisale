@@ -15,6 +15,7 @@ return [
 
     // User / Profile
     'unauthenticated'           => 'يجب تسجيل الدخول أولاً.',
+    'guest_not_found'           => 'لم يتم العثور على المستخدم الضيف. يرجى تقديم guest_uuid صحيح.',
     'profile_fetched'           => 'تم جلب بيانات الملف الشخصي بنجاح.',
     'profile_updated'           => 'تم تحديث الملف الشخصي بنجاح.',
     'delegate_code_locked'      => 'لا يمكن تغيير كود المندوب بعد تعيينه.',
@@ -114,6 +115,8 @@ return [
     // FCM
     'fcm_updated'               => 'تم تحديث رمز الإشعارات بنجاح.',
     'fcm_deleted'               => 'تم حذف رمز الإشعارات بنجاح.',
+    'guest_fcm_updated'         => 'تم العثور على المستخدم الضيف وتحديث رمز الإشعارات بنجاح.',
+    'guest_fcm_created'         => 'تم إنشاء مستخدم ضيف جديد بنجاح.',
 
     // Listings (ListingController)
     'listing_unauthorized_edit2' => 'غير مصرح لك بتعديل هذا الإعلان.',

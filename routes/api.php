@@ -83,12 +83,12 @@ Route::get('v1/test', fn() => response()->json(['ok' => true]));
 
 
 //public listing for specific user
-Route::get('users/{user}', [UserController::class, 'showUserWithListings']);
-//get public  listing best
-Route::get('/the-best/{section}', [BestAdvertiserController::class, 'index']);
+Route::middleware('set.lang')->get('users/{user}', [UserController::class, 'showUserWithListings']);
+//get public listing best
+Route::middleware('set.lang')->get('/the-best/{section}', [BestAdvertiserController::class, 'index']);
 
 // Global Search across all listings
-Route::get('/listings/search', [ListingController::class, 'globalSearch']);
+Route::middleware('set.lang')->get('/listings/search', [ListingController::class, 'globalSearch']);
 
 
 Route::prefix('v1/{section}')->group(function () {
@@ -122,8 +122,12 @@ Route::prefix('v1/{section}')->group(function () {
     // Route::apiResource('listings', ListingController::class)->only(['index', 'show']);
     Route::get('plans', [PlansController::class, 'show']);
 
+    // Public: browse & view listings (no token required)
+    Route::get('listings', [ListingController::class, 'index']);
+    Route::get('listings/{listing}', [ListingController::class, 'show']);
+
     Route::middleware('auth:sanctum')->group(function () {
-        Route::apiResource('listings', ListingController::class)->only(['store', 'update', 'destroy', 'index', 'show']);
+        Route::apiResource('listings', ListingController::class)->only(['store', 'update', 'destroy']);
     });
 });
 
@@ -313,18 +317,22 @@ Route::middleware('auth:sanctum')->group(function () {
     // Reporting Routes
     Route::post('/listings/{listing}/report', [ListingReportController::class, 'store']);
 
-    // Chat Routes
-    Route::prefix('chat')->group(function () {
-        Route::get('/inbox', [ChatController::class, 'inbox']);
-        Route::get('/unread-count', [ChatController::class, 'unreadCount']);
-        Route::post('/send', [ChatController::class, 'send']);
-        Route::get('/support', [ChatController::class, 'supportHistory']);
-        Route::post('/support', [ChatController::class, 'sendToSupport']);
-        Route::get('/listing-summary/{categorySlug}/{listingId}', [ChatController::class, 'getListingSummary']);
-        Route::get('/{user}', [ChatController::class, 'history']);
-        Route::patch('/{conversationId}/read', [ChatController::class, 'markAsRead']);
-    });
-
     Route::post('/listings/{listing}/renew', [ListingController::class, 'renew']);
 });
+
+// ── Chat Routes (token auth OR guest_uuid header) ─────────────────────────────
+Route::middleware(['set.lang', 'chat.auth'])->prefix('chat')->group(function () {
+    Route::get('/inbox', [ChatController::class, 'inbox']);
+    Route::get('/unread-count', [ChatController::class, 'unreadCount']);
+    Route::post('/send', [ChatController::class, 'send']);
+    Route::get('/support', [ChatController::class, 'supportHistory']);
+    Route::post('/support', [ChatController::class, 'sendToSupport']);
+    Route::get('/listing-summary/{categorySlug}/{listingId}', [ChatController::class, 'getListingSummary']);
+    Route::get('/{user}', [ChatController::class, 'history']);
+    Route::patch('/{conversationId}/read', [ChatController::class, 'markAsRead']);
+});
+
 Route::post('/settings/notifications', [UserController::class, 'updateNotificationSettings']);
+
+// ── Guest FCM token sync (public, no auth required) ──────────────────────────
+Route::middleware('set.lang')->post('/guest/fcm-token', [UserController::class, 'updateGuestFcmToken']);
