@@ -40,6 +40,15 @@ Route::middleware('set.lang')->group(function () {
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/admin/login', [AuthController::class, 'adminLogin']);
 
+// OTP Auth Routes
+Route::prefix('auth')->middleware('set.lang')->group(function () {
+    Route::post('/login-or-register',    [AuthController::class, 'loginOrRegister']);
+    Route::post('/verify-otp-register',  [AuthController::class, 'verifyOtpRegister'])->middleware('throttle:auth-verify');
+    Route::post('/resend-otp',           [AuthController::class, 'resendOtp'])->middleware('throttle:auth-resend');
+    Route::post('/reset-password',       [AuthController::class, 'sendResetOtp'])->middleware('throttle:auth-resend');
+    Route::post('/verify-password-reset',[AuthController::class, 'verifyPasswordReset'])->middleware('throttle:auth-verify');
+});
+
 // OTP Routes
 Route::prefix('otp')->group(function () {
     Route::post('/send', [OtpController::class, 'send']);

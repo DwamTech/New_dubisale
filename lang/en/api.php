@@ -71,6 +71,19 @@ return [
     'car_deleted'               => 'Car deleted successfully.',
     'car_unauthorized'          => 'You are not authorized to modify this car.',
 
+    // OTP Flow (login-or-register)
+    'otp_required'              => 'OTP sent. Please enter the code to complete registration.',
+    'otp_cooldown'              => 'Please wait :seconds seconds before resending.',
+    'otp_resent'                => 'OTP resent successfully.',
+    'otp_record_not_found'      => 'No OTP request found. Please start over.',
+    'otp_expired'               => 'OTP has expired. Please request a new one.',
+    'otp_max_attempts'          => 'Maximum attempts exceeded. Please request a new OTP.',
+    'otp_invalid_code'          => 'Invalid OTP code.',
+    'otp_send_failed'           => 'Failed to send OTP. Please try again later.',
+    'reset_user_not_found'      => 'No account found for this phone number.',
+    'reset_otp_required'        => 'OTP sent for password reset.',
+    'reset_success'             => 'Password reset successfully.',
+
     // OTP
     'otp_sent_whatsapp'         => 'OTP sent via WhatsApp.',
     'otp_sent_sms'              => 'OTP sent via SMS.',
