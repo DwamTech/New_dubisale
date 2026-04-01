@@ -277,6 +277,20 @@ Route::prefix('admin')
             Route::post('/preview', [BroadcastController::class, 'preview']);
             Route::get('/history', [BroadcastController::class, 'history']);
         });
+
+        // Backup Management Routes
+        Route::prefix('backups')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\BackupController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\Admin\BackupController::class, 'store']);
+            Route::post('/upload', [\App\Http\Controllers\Admin\BackupController::class, 'upload']);
+            Route::get('/diagnostics', [\App\Http\Controllers\Admin\BackupController::class, 'diagnostics']);
+            Route::get('/statistics', [\App\Http\Controllers\Admin\BackupController::class, 'statistics']);
+            Route::get('/history', [\App\Http\Controllers\Admin\BackupController::class, 'history']);
+            Route::post('/diagnostics/fix', [\App\Http\Controllers\Admin\BackupController::class, 'autoFix']);
+            Route::get('/{id}/download', [\App\Http\Controllers\Admin\BackupController::class, 'download'])->name('admin.backups.download');
+            Route::post('/{id}/restore', [\App\Http\Controllers\Admin\BackupController::class, 'restore']);
+            Route::delete('/{id}', [\App\Http\Controllers\Admin\BackupController::class, 'destroy']);
+        });
     });
 
 Route::get('/all-cars', [CarController::class, 'index']);

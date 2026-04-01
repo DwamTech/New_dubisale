@@ -14,6 +14,7 @@ class BestAdvertiser extends Model
         'user_id',
         'category_ids',
         'max_listings',
+        'rank',
         'is_active',
     ];
 
@@ -21,6 +22,7 @@ class BestAdvertiser extends Model
         'category_ids' => 'array',
         'is_active' => 'boolean',
         'max_listings' => 'integer',
+        'rank' => 'integer',
     ];
 
     public function user()
